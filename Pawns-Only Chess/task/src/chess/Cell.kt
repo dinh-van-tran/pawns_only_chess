@@ -2,7 +2,7 @@ package chess
 
 import java.lang.ref.WeakReference
 
-class Cell(val x: Int, val y: Int) {
+class Cell(val x: String, val y: Int) {
     var chessPieceWeakReference: WeakReference<ChessPiece> = WeakReference(null)
 
     fun occupyCell(chessPiece: ChessPiece) {
@@ -14,10 +14,10 @@ class Cell(val x: Int, val y: Int) {
     }
 
     override fun toString(): String {
-        val side: String = chessPieceWeakReference.get()?.side?.charater ?: " "
+        val side: String = chessPieceWeakReference.get()?.player?.printableSideCharacter ?: " "
 
         return when (x) {
-            8 -> "| $side |"
+            "h" -> "| $side |"
             else -> "| $side "
         }
     }
