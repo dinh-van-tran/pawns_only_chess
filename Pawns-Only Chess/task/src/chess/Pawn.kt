@@ -14,10 +14,6 @@ class Pawn(player: Player = Player.BLACK, occupiedCell: Cell): ChessPiece(player
             capture(newPosition)
         }
 
-        if (moveResult == ChessGame.MoveResult.SUCCESSFUL) {
-            increasePlayerMoveCount()
-        }
-
         return moveResult
     }
 
@@ -27,9 +23,10 @@ class Pawn(player: Player = Player.BLACK, occupiedCell: Cell): ChessPiece(player
             return checkResult
         }
 
-        moveToNewPosition(newPosition)
-
-        increasePlayerMoveCount()
+        setPosition(newPosition)
+        if (firstMove) {
+            firstMove = false
+        }
 
         return ChessGame.MoveResult.SUCCESSFUL
     }
@@ -41,9 +38,7 @@ class Pawn(player: Player = Player.BLACK, occupiedCell: Cell): ChessPiece(player
         }
 
         capturedChessPiece?.capture()
-        moveToNewPosition(newPosition)
-
-        increasePlayerMoveCount()
+        setPosition(newPosition)
 
         return ChessGame.MoveResult.SUCCESSFUL
     }
@@ -61,7 +56,6 @@ class Pawn(player: Player = Player.BLACK, occupiedCell: Cell): ChessPiece(player
 
         val isPawnMoveOneOrTwoStepForward = (yOffset in 1..2)
         if (firstMove && isPawnMoveOneOrTwoStepForward) {
-            firstMove = false
             return ChessGame.MoveResult.VALID
         }
 
@@ -74,53 +68,102 @@ class Pawn(player: Player = Player.BLACK, occupiedCell: Cell): ChessPiece(player
     }
 
     override fun checkValidCapture(destinationCell: Cell): Pair<ChessGame.MoveResult, ChessPiece?> {
+        val invalidMove = Pair(ChessGame.MoveResult.INVALID_MOVE, null)
+
         val (pawnOnlyMoveForward, yOffset) = checkPawnOnlyMoveForward(destinationCell)
         if (!pawnOnlyMoveForward) {
-            return Pair(ChessGame.MoveResult.INVALID_MOVE, null)
+            return invalidMove
         }
 
         val isMoveOneStepForward = (yOffset == 1)
-        val isMoveDiagonal = abs(this.occupiedCell.x - destinationCell.x) == 1
+        val isMoveDiagonal = abs(this.occupiedCell!!.x - destinationCell.x) == 1
         val isValidPawnMoveForCapturing = isMoveOneStepForward && isMoveDiagonal
         if (!isValidPawnMoveForCapturing) {
-            return Pair(ChessGame.MoveResult.INVALID_MOVE, null)
+            return invalidMove
         }
 
         var capturedChessPiece = destinationCell.chessPieceWeakReference.get()
-        if (capturedChessPiece == null) {
-            val backPosition = Board.INSTANCE.getBackCell(destinationCell, player.moveDirection)
-            val enPassantCapturedChessPiece = backPosition?.chessPieceWeakReference?.get()
-            if (enPassantCapturedChessPiece == null) {
-                return Pair(ChessGame.MoveResult.INVALID_MOVE, null)
-            }
+            ?: return checkValidEnPasssantCapture(destinationCell)
 
-            val isEnPassantHappensRightAway = (player.moveCount - moveCount) == 1
-            if (!isEnPassantHappensRightAway) {
-                return Pair(ChessGame.MoveResult.INVALID_MOVE, null)
-            }
-
-            capturedChessPiece = enPassantCapturedChessPiece
+        if (this.player == capturedChessPiece.player) {
+            return invalidMove
         }
 
-        return if (this.player == capturedChessPiece.player) {
-            Pair(ChessGame.MoveResult.INVALID_INPUT, null)
-        } else {
-            Pair(ChessGame.MoveResult.VALID, capturedChessPiece)
+        return Pair(ChessGame.MoveResult.VALID, capturedChessPiece)
+    }
+
+    private fun checkValidEnPasssantCapture(destinationCell: Cell): Pair<ChessGame.MoveResult, ChessPiece?> {
+        val invalidMove = Pair(ChessGame.MoveResult.INVALID_MOVE, null)
+
+        val backPosition = Board.INSTANCE.getBackCell(destinationCell, player.moveDirection)
+        val enPassantCapturedChessPiece = backPosition?.chessPieceWeakReference?.get()
+            ?: return invalidMove
+
+        if (enPassantCapturedChessPiece.player == player) {
+            return invalidMove
         }
+
+        val isEnPassantHappensRightAway = player.moveCount == moveCount
+        if (!isEnPassantHappensRightAway) {
+            return invalidMove
+        }
+
+        return Pair(ChessGame.MoveResult.VALID, enPassantCapturedChessPiece)
     }
 
     private fun checkPawnOnlyMoveForward(destinationCell: Cell): Pair<Boolean, Int> {
-        val yOffset = (destinationCell.y - this.occupiedCell.y) * player.moveDirection
+        val yOffset = (destinationCell.y - this.occupiedCell!!.y) * player.moveDirection
         return Pair(yOffset > 0, yOffset)
     }
 
     override fun detectMoveType(destinationCell: Cell): MoveType {
-        val xOffset = destinationCell.x - this.occupiedCell.x
+        val xOffset = destinationCell.x - this.occupiedCell!!.x
 
         return if (xOffset == 0) {
             MoveType.MOVE
         } else {
             MoveType.CAPTURE
         }
+    }
+
+    override fun havePossibleMoves(): Boolean {
+        val possibleMoves = mutableListOf<String>()
+        if (isCaptured) {
+            return false
+        }
+
+        val forwardCell = occupiedCell!!.getNextCellByOffset(xOffset = 0, yOffset = player.moveDirection)
+        if (
+            forwardCell != null
+            && checkValidMove(forwardCell) == ChessGame.MoveResult.VALID
+        ) {
+            return true
+        }
+
+        val capturePositionLeft = occupiedCell!!.getNextCellByOffset(
+            xOffset = -1,
+            yOffset = player.moveDirection
+        )
+
+        if (capturePositionLeft != null) {
+            val (checkResult, _) = checkValidCapture(capturePositionLeft)
+            if (checkResult == ChessGame.MoveResult.VALID) {
+                return true
+            }
+        }
+
+        val capturePositionRight = occupiedCell!!.getNextCellByOffset(
+            xOffset = 1,
+            yOffset = player.moveDirection
+        )
+
+        if (capturePositionRight != null) {
+            val (checkResult, _) = checkValidCapture(capturePositionRight)
+            if (checkResult == ChessGame.MoveResult.VALID) {
+                return true
+            }
+        }
+
+        return false
     }
 }

@@ -5,6 +5,15 @@ enum class ChessGame {
 
     private var playerTurn: Player = Player.WHITE
 
+    init {
+        initPawns()
+    }
+
+    private fun initPawns() {
+        Player.BLACK.initChessPieces()
+        Player.WHITE.initChessPieces()
+    }
+
     fun play() {
         println("Pawns-Only Chess")
         println("First Player's name:")
@@ -16,24 +25,47 @@ enum class ChessGame {
         Board.INSTANCE.print()
 
         while (true) {
-            println("${playerTurn.printableName}'s turn:")
-            val command = readln()
-            if (command == "exit") {
-                println("Bye!")
+            if (!eventLoop()) {
                 break
             }
+        }
+    }
 
-            val (currentPositionOrNull, destinationPositionOrNull) = parseMovePositions(command)
-            val moveResult = move(currentPositionOrNull, destinationPositionOrNull)
-            when (moveResult) {
-                MoveResult.INVALID_INPUT, MoveResult.INVALID_MOVE -> println("Invalid Input")
-                MoveResult.NO_PIECE -> println("No ${playerTurn.printableSideName} pawn at $currentPositionOrNull")
-                MoveResult.SUCCESSFUL -> Board.INSTANCE.print()
-                else -> {
+    private fun eventLoop(): Boolean {
+        println("${playerTurn.printableName}'s turn:")
+        val command = readln()
+        if (command == "exit") {
+            println("Bye!")
+            return false
+        }
 
+        val (currentPositionOrNull, destinationPositionOrNull) = parseMovePositions(command)
+        val moveResult = move(currentPositionOrNull, destinationPositionOrNull)
+
+        when (moveResult) {
+            MoveResult.INVALID_INPUT, MoveResult.INVALID_MOVE -> println("Invalid Input")
+            MoveResult.NO_PIECE -> println("No ${playerTurn.printableSideName.lowercase()} pawn at $currentPositionOrNull")
+            MoveResult.SUCCESSFUL -> {
+                Board.INSTANCE.print()
+                val (isWon, wonPlayer) = checkIsWon()
+                if (isWon) {
+                    println("${wonPlayer?.printableSideName} Wins!")
+                    println("Bye!")
+                    return false
+                }
+
+                if (checkIsStalemate()) {
+                    println("Stalemate!")
+                    println("Bye!")
+                    return false
                 }
             }
+            else -> {
+
+            }
         }
+
+        return true
     }
 
     enum class MoveResult {
@@ -44,18 +76,15 @@ enum class ChessGame {
         SUCCESSFUL,
     }
 
-    private fun move(currentPositionOrNull: String?, destinationPositionOrNull: String?): MoveResult {
-        if (currentPositionOrNull == null || destinationPositionOrNull == null) {
+    private fun move(currentPosition: String?, destinationPosition: String?): MoveResult {
+        if (currentPosition == null || destinationPosition == null) {
             return MoveResult.INVALID_INPUT
         }
 
-        val currentPosition = currentPositionOrNull!!
-        val destinationPosition = destinationPositionOrNull!!
-
-        val moveResult = Board.INSTANCE.move(currentPosition, destinationPosition, playerTurn)
+        val moveResult = playerTurn.move(currentPosition, destinationPosition)
         when (moveResult) {
             MoveResult.SUCCESSFUL -> {
-                switchPlayer()
+                playerTurn = playerTurn.nextPlayer()
             }
             else -> {}
         }
@@ -76,11 +105,31 @@ enum class ChessGame {
         return Pair(currentPosition, destinationPosition)
     }
 
-    private fun switchPlayer() {
-        playerTurn = if (playerTurn == Player.BLACK) {
-            Player.WHITE
-        } else {
-            Player.BLACK
+    private fun checkIsWon(): Pair<Boolean, Player?> {
+        if (Player.BLACK.isWon()) {
+            return Pair(true, Player.BLACK)
         }
+
+        if (Player.WHITE.isWon()) {
+            return Pair(true, Player.WHITE)
+        }
+
+        return checkIsBeCapturedAllPieces()
+    }
+
+    private fun checkIsBeCapturedAllPieces(): Pair<Boolean, Player?> {
+        if (Player.BLACK.isBeCapturedAllPieces()) {
+            return Pair(true, Player.WHITE)
+        }
+
+        if (Player.WHITE.isBeCapturedAllPieces()) {
+            return Pair(true, Player.BLACK)
+        }
+
+        return Pair(false, null)
+    }
+
+    private fun checkIsStalemate(): Boolean {
+        return Player.BLACK.isStalemate() || Player.WHITE.isStalemate()
     }
 }

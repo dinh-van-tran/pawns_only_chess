@@ -3,12 +3,10 @@ package chess
 enum class Board {
     INSTANCE;
 
-    private val pawnList = mutableListOf<Pawn>()
     private val rows = mutableListOf<MutableList<Cell>>()
 
     init {
         initCells()
-        initPawns()
     }
 
     private fun initCells() {
@@ -19,59 +17,6 @@ enum class Board {
             }
             rows.add(row)
         }
-    }
-
-    private fun initPawns() {
-        val initYPositionForBlack = 6
-        for (initXPositionForBlack in 0..7) {
-            pawnList.add(Pawn(occupiedCell = rows[initYPositionForBlack][initXPositionForBlack]))
-        }
-
-        val initYPositionForWhite = 1
-        for (initXPositionForWhite in 0..7) {
-            pawnList.add(Pawn(player = Player.WHITE, occupiedCell = rows[initYPositionForWhite][initXPositionForWhite]))
-        }
-    }
-
-    fun move(currentPosition: String, destinationPosition: String, player: Player): ChessGame.MoveResult {
-        val (moveResult, currentPiece, destinationCell) = checkValidMove(currentPosition, destinationPosition, player)
-        if (moveResult != ChessGame.MoveResult.VALID) {
-            return moveResult
-        }
-
-        return currentPiece!!.moveOrCapture(destinationCell!!)
-    }
-
-    private fun checkValidMove(currentPosition: String, destinationPosition: String, playerTurn: Player): Triple<ChessGame.MoveResult, ChessPiece?, Cell?> {
-        val inValidInput = Triple(ChessGame.MoveResult.INVALID_INPUT, null, null)
-
-        val currentCell = getCell(currentPosition)
-        val destinationCell = getCell(destinationPosition)
-        if (currentCell == null || destinationCell == null) {
-            return inValidInput
-        }
-
-        val noPiece = Triple(ChessGame.MoveResult.NO_PIECE, null, null)
-        val currentPiece = currentCell.chessPieceWeakReference.get()
-            ?: return noPiece
-        if (currentPiece.player != playerTurn) {
-            return noPiece
-        }
-
-        if (currentPosition == destinationPosition) {
-            return inValidInput
-        }
-
-        val destinationPawn = destinationCell.chessPieceWeakReference.get()
-        if (destinationPawn != null && currentPiece.player == destinationPawn.player) {
-            return inValidInput
-        }
-
-        return Triple(ChessGame.MoveResult.VALID, currentPiece, destinationCell)
-    }
-
-    private fun getCell(position: String): Cell {
-        return rows[parseYPosition(position)][parseXPosition(position)]
     }
 
     fun getBackCell(position: Cell, direction: Int): Cell? {
@@ -86,24 +31,47 @@ enum class Board {
         return rows[realYPosition][realXPosition]
     }
 
-    private fun parseXPosition(position: String): Int {
-        return when (position.first()) {
-            'a' -> 0
-            'b' -> 1
-            'c' -> 2
-            'd' -> 3
-            'e' -> 4
-            'f' -> 5
-            'g' -> 6
-            'h' -> 7
+    fun getCell(position: String): Cell {
+        val y =position.last().toString().toInt()
+        val x = mapXStingToInt(position.first().toString())
+        return rows[y - 1][x - 1]
+    }
+
+    fun getCell(x: Int, y: Int): Cell? {
+        if (x !in 1..8 || y !in 1..8) {
+            return null
+        }
+
+        return rows[y-1][x-1]
+    }
+
+    private fun mapXStingToInt(position: String): Int {
+        return when (position) {
+            "a" -> 1
+            "b" -> 2
+            "c" -> 3
+            "d" -> 4
+            "e" -> 5
+            "f" -> 6
+            "g" -> 7
+            "h" -> 8
             else -> -1
         }
     }
 
-    private fun parseYPosition(position: String): Int {
-        return position.last().toString().toInt() - 1
+    fun mapXIntToString(position: Int): String {
+        return when (position) {
+            1 -> "a"
+            2 -> "b"
+            3 -> "c"
+            4 -> "d"
+            5 -> "e"
+            6 -> "f"
+            7 -> "g"
+            8 -> "h"
+            else -> "z"
+        }
     }
-
 
     fun print() {
         for (rowIndex in 7 downTo 0) {
