@@ -1,7 +1,8 @@
 package chess
 
-class ChessGame {
-    private val board: Board = Board()
+enum class ChessGame {
+    INSTANCE;
+
     private var playerTurn: Player = Player.WHITE
 
     fun play() {
@@ -12,7 +13,7 @@ class ChessGame {
         println("Second Player's name:")
         playerTurn.nextPlayer().printableName = readln()
 
-        board.print()
+        Board.INSTANCE.print()
 
         while (true) {
             println("${playerTurn.printableName}'s turn:")
@@ -27,7 +28,7 @@ class ChessGame {
             when (moveResult) {
                 MoveResult.INVALID_INPUT, MoveResult.INVALID_MOVE -> println("Invalid Input")
                 MoveResult.NO_PIECE -> println("No ${playerTurn.printableSideName} pawn at $currentPositionOrNull")
-                MoveResult.SUCCESSFUL -> board.print()
+                MoveResult.SUCCESSFUL -> Board.INSTANCE.print()
                 else -> {
 
                 }
@@ -51,7 +52,7 @@ class ChessGame {
         val currentPosition = currentPositionOrNull!!
         val destinationPosition = destinationPositionOrNull!!
 
-        val moveResult = board.move(currentPosition, destinationPosition, playerTurn)
+        val moveResult = Board.INSTANCE.move(currentPosition, destinationPosition, playerTurn)
         when (moveResult) {
             MoveResult.SUCCESSFUL -> {
                 switchPlayer()

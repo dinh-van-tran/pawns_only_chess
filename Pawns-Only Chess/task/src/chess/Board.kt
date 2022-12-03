@@ -1,6 +1,8 @@
 package chess
 
-class Board {
+enum class Board {
+    INSTANCE;
+
     private val pawnList = mutableListOf<Pawn>()
     private val rows = mutableListOf<MutableList<Cell>>()
 
@@ -12,8 +14,8 @@ class Board {
     private fun initCells() {
         for (rowIndex in 1..8) {
             val row = mutableListOf<Cell>()
-            for (columnIndex in 'a'..'h') {
-                row.add(Cell(x = columnIndex.toString(), y = rowIndex))
+            for (columnIndex in 1..8) {
+                row.add(Cell(x = columnIndex, y = rowIndex))
             }
             rows.add(row)
         }
@@ -37,8 +39,9 @@ class Board {
             return moveResult
         }
 
-        return currentPiece!!.move(destinationCell!!)
+        return currentPiece!!.moveOrCapture(destinationCell!!)
     }
+
     private fun checkValidMove(currentPosition: String, destinationPosition: String, playerTurn: Player): Triple<ChessGame.MoveResult, ChessPiece?, Cell?> {
         val inValidInput = Triple(ChessGame.MoveResult.INVALID_INPUT, null, null)
 
@@ -69,6 +72,18 @@ class Board {
 
     private fun getCell(position: String): Cell {
         return rows[parseYPosition(position)][parseXPosition(position)]
+    }
+
+    fun getBackCell(position: Cell, direction: Int): Cell? {
+        val backPosition = position.y - direction
+        val realXPosition = position.x - 1
+        val realYPosition = backPosition - 1
+
+        if (realYPosition !in 0..7) {
+            return null
+        }
+
+        return rows[realYPosition][realXPosition]
     }
 
     private fun parseXPosition(position: String): Int {
